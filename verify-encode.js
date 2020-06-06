@@ -16,6 +16,14 @@ const exampleData = [
     data: { name: 'giulio', surname: 'dellorbo', about: { age: '27' }, other: 'hello' }
   },
   {
+    fileName: 'ref_deep_nested_map',
+    data: { name: 'giulio', surname: 'dellorbo', about: { age: '27', eyes: 'green'}, documents:{test:{ nest1:{ nest2:{ nest3: { demo: 'demovalue'}}}}},country: 'US'}
+  },
+  {
+    fileName: 'ref_deep_nest_single_el_',
+    data: { name: 'giulio', surname: 'dellorbo', about: { age: '27', eyes: 'green'}, documents:{test:{ nest1:{ nest2:{ nest3: { demo: 'demovalue'}}}},visa:{id:'12345'}},country: 'US'}
+  },
+  {
     fileName: 'ref_map_long_strings',
     data: { name: 'averyveryveryveryveryveryveryveryveryveryveryverylongname','bigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigkey':'value'}
   }
