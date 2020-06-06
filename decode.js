@@ -11,6 +11,23 @@ class Decoder {
     this.readDataType();
     return this.output;
   }
+  getObjectAtPath(pathArr){
+    //if no path returns root object
+    let targetObj = this.output;
+    let i = 0;
+    if(!pathArr || pathArr.length == 0) return targetObj;
+    while(pathArr[i]){
+      const currLevelKey = pathArr[i].lastKey;
+      if(currLevelKey) targetObj = targetObj[currLevelKey];
+      i++;
+    }
+    console.log('getObjectAtPath', pathArr, 'target', JSON.stringify(targetObj));
+    return targetObj;
+  }
+  getCurrStackPath(){
+    if(this.stack.length < 2) return false;
+    return this.stack.slice(1).map(level => level.path);
+  }
   readStringAtOffset(len){
     console.log('readStringAtOffset',len);
     let str = '';
@@ -24,9 +41,10 @@ class Decoder {
     console.log('readMapKeyAtOffset', len);
     const string = this.readStringAtOffset(len);
     const stack = this.getCurrStack();
-    if(this.isStackRoot()){
-      this.output[string] = undefined;
-    }
+    const currPath = this.getCurrStackPath();
+    const parentObj = this.getObjectAtPath(currPath);
+    //init a new key at parentObj to initial undefined value
+    parentObj[string] = undefined;
     stack.nextKey = false;
     stack.lastKey = string;
   }
@@ -34,9 +52,11 @@ class Decoder {
     console.log('readMapValueAtOffset', len);
     const valueString = this.readStringAtOffset(len);
     const stack = this.getCurrStack();
-    if(this.isStackRoot()){
-      this.output[stack.lastKey] = valueString;
-    }
+    const currPath = this.getCurrStackPath();
+    const parentObj = this.getObjectAtPath(currPath);
+    //set value for lastKey at parentObj
+    parentObj[stack.lastKey] = valueString;
+    
     stack.length--;
     if (stack.length) {
       stack.nextKey = true;
@@ -45,7 +65,7 @@ class Decoder {
   readDataType(){
     this.offset++;
     const currType = this.buffer[this.offset];
-    console.log('readDataType', this.offset);
+    console.log('readDataType', this.offset, 'output', JSON.stringify(this.output));
     if(this.offset === this.buffer.byteLength){
       return this.endOfData();
     }
@@ -54,7 +74,15 @@ class Decoder {
       console.log('readDataType - map detected');
       this.output = {};
       const mapLength= (currType & 0x0f);
-      this.stack.push({root:true, type:'map', length: mapLength, nextKey: true, lastKey: undefined});
+      const isRoot = this.stack.length === 0;
+      this.stack.push({
+        root: isRoot,
+        path: !isRoot && this.getCurrStack().lastKey,
+        type:'map',
+        length: mapLength,
+        nextKey: true,
+        lastKey: undefined
+      });
     }
     //string up to 31bytes length
     if((currType >>> 5) === 0x05) {
@@ -86,7 +114,7 @@ class Decoder {
     return this.output;
   }
 }
-const rawData = fs.readFileSync('./ref_simple_map.bin');
+const rawData = fs.readFileSync('./ref_nested_map.bin');
 console.log('raw:',rawData);
 const decoder = new Decoder();
 const outputData = decoder.decode(rawData);
