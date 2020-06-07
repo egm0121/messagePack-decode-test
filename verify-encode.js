@@ -20,6 +20,10 @@ const exampleData = [
     data: { name: 'giulio', surname: 'dellorbo', about: { age: '27', eyes: 'green'}, documents:{test:{ nest1:{ nest2:{ nest3: { demo: 'demovalue'}}}}},country: 'US'}
   },
   {
+    fileName: 'ref_deep_nested_empty',
+    data: { name: 'giulio', surname: 'dellorbo', about: { age: '27', eyes: 'green'}, documents:{test:{ nest1:{ nest2:{ nest3:{}}}}},country: 'US'}
+  },
+  {
     fileName: 'ref_deep_nest_single_el_',
     data: { name: 'giulio', surname: 'dellorbo', about: { age: '27', eyes: 'green'}, documents:{test:{ nest1:{ nest2:{ nest3: { demo: 'demovalue'}}}},visa:{id:'12345'}},country: 'US'}
   },

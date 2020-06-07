@@ -93,6 +93,13 @@ class Decoder {
         nextKey: true,
         lastKey: undefined
       });
+      //handle empty map case
+      if(mapLength === 0){
+        // all parents stack with one child element
+        // can now be marked as completed since the
+        // leaf is the empty map we just added on the stack 
+        this.resetParentStacks();
+      }
     }
     //string up to 31bytes length
     if((currType >>> 5) === 0x05) {
@@ -146,7 +153,8 @@ class Decoder {
     return this.output;
   }
 }
-const rawData = fs.readFileSync('./ref_deep_nest_single_el_.bin');
+// const rawData = fs.readFileSync('./ref_deep_nest_single_el_.bin');
+const rawData = fs.readFileSync('./ref_deep_nested_empty.bin');
 console.log('raw:',rawData);
 const decoder = new Decoder();
 const outputData = decoder.decode(rawData);
