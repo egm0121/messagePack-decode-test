@@ -87,7 +87,6 @@ class Decoder {
     if(this.offset === this.buffer.byteLength){
       return this.endOfData();
     }
-    // this.cleanUpStack();
     //map up to 15 el
     if((currType >>> 4) === 0x08){
       this.debug('readDataType - map detected');
