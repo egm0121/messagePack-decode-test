@@ -2,14 +2,30 @@ const fs = require('fs');
 
 class Decoder {
   constructor() {
+    this.isDebugMode = false;
     this.output = undefined;
     this.stack = [];
     this.offset = -1;
   }
+  debug(...args){
+    if(this.isDebugMode){
+      console.log(...args);
+    }
+  }
+  setDebugMode(value){
+    this.isDebugMode = value;
+  }
   decode(rawBuffer){
+    this.resetState();
     this.buffer = rawBuffer;
     this.readDataType();
     return this.output;
+  }
+  resetState(){
+    this.output = undefined;
+    this.buffer = undefined;
+    this.stack = [];
+    this.offset = -1;
   }
   getObjectAtPath(pathArr){
     //if no path returns root object
@@ -21,7 +37,7 @@ class Decoder {
       if(currLevelKey) targetObj = targetObj[currLevelKey];
       i++;
     }
-    console.log('getObjectAtPath', pathArr, 'target', JSON.stringify(targetObj));
+    this.debug('getObjectAtPath', pathArr, 'target', JSON.stringify(targetObj));
     return targetObj;
   }
   getCurrStackPath(){
@@ -33,7 +49,7 @@ class Decoder {
     return this.getObjectAtPath(currPath);
   }
   readStringAtOffset(len){
-    console.log('readStringAtOffset',len);
+    this.debug('readStringAtOffset',len);
     let str = '';
     for(let i=0; i < len; i++){
       this.offset++;
@@ -42,7 +58,7 @@ class Decoder {
     return str;
   }
   readMapKeyAtOffset(len){
-    console.log('readMapKeyAtOffset', len);
+    this.debug('readMapKeyAtOffset', len);
     const string = this.readStringAtOffset(len);
     const stack = this.getCurrStack();
     const parentObj = this.getObjectAtCurrStackPath();
@@ -52,7 +68,7 @@ class Decoder {
     stack.lastKey = string;
   }
   readMapValueAtOffset(len){
-    console.log('readMapValueAtOffset', len);
+    this.debug('readMapValueAtOffset', len);
     const valueString = this.readStringAtOffset(len);
     const stack = this.getCurrStack();
     const parentObj = this.getObjectAtCurrStackPath();
@@ -67,14 +83,14 @@ class Decoder {
   readDataType(){
     this.offset++;
     const currType = this.buffer[this.offset];
-    console.log('readDataType', this.offset, 'stack', JSON.stringify(this.stack));
+    this.debug('readDataType', this.offset, 'stack', JSON.stringify(this.stack));
     if(this.offset === this.buffer.byteLength){
       return this.endOfData();
     }
     // this.cleanUpStack();
     //map up to 15 el
     if((currType >>> 4) === 0x08){
-      console.log('readDataType - map detected');
+      this.debug('readDataType - map detected');
       const isRoot = this.stack.length === 0;
       const mapPath = !isRoot && this.getCurrStack().lastKey;
       const mapLength= (currType & 0x0f);
@@ -103,7 +119,7 @@ class Decoder {
     }
     //string up to 31bytes length
     if((currType >>> 5) === 0x05) {
-      console.log('readDataType - string detected');
+      this.debug('readDataType - string detected');
       const strLen = (currType & 0x1f);
       const stack = this.getCurrStack();
       if(!stack){
@@ -127,25 +143,27 @@ class Decoder {
     return this.stack.length === 1;
   }
   resetParentStacks(){
-    console.log('reset parent stacks');
+    this.debug('reset parent stacks');
     let depth = this.stack.length -1;
     while(this.stack[depth]) {
       const nStack = this.stack[depth];
       if(nStack.length <= 1 && !this.stack[depth].root){
-        console.log('remove stack @ depth',depth)
+        this.debug('remove stack @ depth',depth)
         this.stack.pop()
       }
       depth--;
     }
   }
   endOfData() {
-    console.log('endOfData');
+    this.debug('endOfData');
     return this.output;
   }
 }
-const rawData = fs.readFileSync('./ref_deep_nest_single_el_.bin');
-// const rawData = fs.readFileSync('./ref_deep_nested_empty.bin');
-console.log('raw:',rawData);
+const data1 = fs.readFileSync('./ref_deep_nest_single_el_.bin');
+const data2 = fs.readFileSync('./ref_deep_nested_empty.bin');
+
 const decoder = new Decoder();
-const outputData = decoder.decode(rawData);
-console.log('decoded:', JSON.stringify(outputData));
+[data1, data2].map(encoded => {
+  const outputData = decoder.decode(encoded);
+  console.log('decoded:', JSON.stringify(outputData));
+});
