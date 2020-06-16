@@ -1,5 +1,77 @@
 const fs = require('fs');
-
+const DATATYPES = {
+  NIL: 'NIL',
+  BOOL: 'BOOL',
+  UINT: 'UINT',
+  INT: 'INT',
+  FLOAT: 'FLOAT',
+  STR: 'STR',
+  BIN: 'BIN',
+  ARRAY: 'ARRAY',
+  MAP: 'MAP',
+  TIMESTAMP: 'TIMESTAMP'
+}
+const DATATYPE_LENGTH = {
+  BIN:{
+    0xc4: 1,
+    0xc5: 2,
+    0xc6: 4,
+  },
+  UINT:{ 
+    0xcc: 1,
+    0xcd: 2,
+    0xce: 4,
+    0xcf: 8,
+  },
+  INT:{
+    0xd0: 1,
+    0xd1: 2,
+    0xd2: 4,
+    0xd3: 8,
+  },
+  FLOAT:{
+    0xca: 4,
+    0xcb: 8,
+  },
+  STRING:{
+    0xd9: 1,
+    0xda: 2,
+    0xdb: 4
+  },
+  MAP: {
+    0xde: 2,
+    0xdf: 4,
+  },
+  ARRAY: {
+    0xdc: 2,
+    0xdd: 4
+  }
+};
+const BYTE_TO_DATATYPE = {
+  0x0c : DATATYPES.NIL,
+  0xc2: DATATYPES.BOOL,
+  0xc3: DATATYPES.BOOL,
+  0xc4: DATATYPES.BIN,
+  0xc5: DATATYPES.BIN,
+  0xc6: DATATYPES.BIN,
+  0xca: DATATYPES.FLOAT,
+  0xcb: DATATYPES.FLOAT,
+  0xcc: DATATYPES.UINT,
+  0xcd: DATATYPES.UINT,
+  0xce: DATATYPES.UINT,
+  0xcf: DATATYPES.UINT,
+  0xd0: DATATYPES.INT,
+  0xd1: DATATYPES.INT,
+  0xd2: DATATYPES.INT,
+  0xd3: DATATYPES.INT,
+  0xd9: DATATYPES.STR,
+  0xda: DATATYPES.STR,
+  0xdb: DATATYPES.STR,
+  0xdc: DATATYPES.ARRAY,
+  0xdd: DATATYPES.ARRAY,
+  0xde: DATATYPES.MAP,
+  0xdf: DATATYPES.MAP
+}
 class Decoder {
   constructor() {
     this.isDebugMode = false;
@@ -79,6 +151,40 @@ class Decoder {
     if (stack.length) {
       stack.nextKey = true;
     }
+  }
+  readMultiByteUInt(bytesLength){
+    let length = 0;
+    this.offset++; //increment offset to the start of the int bytes
+    if(bytesLength === 1){
+      length = this.buffer.readUInt8(this.offset);
+    }
+    if(bytesLength === 2){
+      this.offset++; //increment twice since it's a 16bit uint
+      length = this.buffer.readUInt16BE(this.offset)
+    }
+    if(bytesLength === 4){
+      this.offset += 2;
+      length = this.buffer.readUInt32BE(this.offset);
+    }
+    this.debug('read multi byte uint:', bytesLength, 'value: ',length);
+    return length;
+  }
+  readMultiByteInt(bytesLength){
+    let length = 0;
+    this.offset++; //increment offset to the start of the int bytes
+    if(bytesLength === 1){
+      length = this.buffer.readInt8(this.offset);
+    }
+    if(bytesLength === 2){
+      this.offset++; //increment twice since it's a 16bit uint
+      length = this.buffer.readInt16BE(this.offset)
+    }
+    if(bytesLength === 4){
+      this.offset += 2;
+      length = this.buffer.readInt32BE(this.offset);
+    }
+    this.debug('read multi byte int:', bytesLength, 'value: ',length);
+    return length;
   }
   readDataType(){
     this.offset++;
