@@ -33,7 +33,7 @@ const DATATYPE_LENGTH = {
     0xca: 4,
     0xcb: 8,
   },
-  STRING:{
+  STR:{
     0xd9: 1,
     0xda: 2,
     0xdb: 4
@@ -109,7 +109,7 @@ class Decoder {
       if(currLevelKey) targetObj = targetObj[currLevelKey];
       i++;
     }
-    this.debug('getObjectAtPath', pathArr, 'target', JSON.stringify(targetObj));
+    this.debug('getObjectAtPath', pathArr);
     return targetObj;
   }
   getCurrStackPath(){
@@ -193,53 +193,67 @@ class Decoder {
     if(this.offset === this.buffer.byteLength){
       return this.endOfData();
     }
-    //map up to 15 el
-    if((currType >>> 4) === 0x08){
-      this.debug('readDataType - map detected');
-      const isRoot = this.stack.length === 0;
-      const mapPath = !isRoot && this.getCurrStack().lastKey;
-      const mapLength= (currType & 0x0f);
-      if (isRoot) {
-        this.output = {};
-      } else {
-        const parentNode = this.getObjectAtCurrStackPath();
-        parentNode[mapPath] = {};
-        this.getCurrStack().nextKey = true;
-      }
-      this.stack.push({
-        root: isRoot,
-        path: mapPath,
-        type:'map',
-        length: mapLength,
-        nextKey: true,
-        lastKey: undefined
-      });
-      //handle empty map case
-      if(mapLength === 0){
-        // all parents stack with one child element
-        // can now be marked as completed since the
-        // leaf is the empty map we just added on the stack 
-        this.resetParentStacks();
-      }
+    //parse MAP
+    if( BYTE_TO_DATATYPE[currType] === DATATYPES.MAP || (currType >>> 4) === 0x08 ){
+      this.readMapDataType(currType)
     }
-    //string up to 31bytes length
-    if((currType >>> 5) === 0x05) {
-      this.debug('readDataType - string detected');
-      const strLen = (currType & 0x1f);
-      const stack = this.getCurrStack();
-      if(!stack){
-        this.output = this.readStringAtOffset(strLen);
-      }
-      if(stack.type == 'map'){
-        if(stack.nextKey){
-          this.readMapKeyAtOffset(strLen);
-        }
-        else {
-          this.readMapValueAtOffset(strLen);
-        }
-      }
+    //parse STR
+    if( BYTE_TO_DATATYPE[currType] === DATATYPES.STR || (currType >>> 5) === 0x05) {
+     this.readStringDataType(currType);
     }
     return this.readDataType();
+  }
+  readMapDataType(firstByte){
+    this.debug('readDataType - map detected');
+    const isRoot = this.stack.length === 0;
+    const mapPath = !isRoot && this.getCurrStack().lastKey;
+    let mapLength = (firstByte & 0x0f);
+    const multiByteLength = DATATYPE_LENGTH.MAP[firstByte];
+    if (multiByteLength) {
+      mapLength = this.readMultiByteUInt(multiByteLength);
+    }
+    if (isRoot) {
+      this.output = {};
+    } else {
+      const parentNode = this.getObjectAtCurrStackPath();
+      parentNode[mapPath] = {};
+      this.getCurrStack().nextKey = true;
+    }
+    this.stack.push({
+      root: isRoot,
+      path: mapPath,
+      type:'map',
+      length: mapLength,
+      nextKey: true,
+      lastKey: undefined
+    });
+    //handle empty map case
+    if(mapLength === 0){
+      // all parents stack with one child element
+      // can now be marked as completed since the
+      // leaf is the empty map we just added on the stack 
+      this.resetParentStacks();
+    }
+  }
+  readStringDataType(firstByte){
+    this.debug('readDataType - string detected');
+    let strLen = (firstByte & 0x1f);
+    const multiByteLength = DATATYPE_LENGTH.STR[firstByte];
+    if (multiByteLength) {
+      strLen = this.readMultiByteUInt(multiByteLength);
+    }
+    const stack = this.getCurrStack();
+    if(!stack){
+      this.output = this.readStringAtOffset(strLen);
+    }
+    if(stack.type === 'map'){
+      if(stack.nextKey){
+        this.readMapKeyAtOffset(strLen);
+      }
+      else {
+        this.readMapValueAtOffset(strLen);
+      }
+    }
   }
   getCurrStack(){
     return this.stack[this.stack.length-1];
@@ -266,9 +280,11 @@ class Decoder {
 }
 const data1 = fs.readFileSync('./ref_deep_nest_single_el_.bin');
 const data2 = fs.readFileSync('./ref_deep_nested_empty.bin');
+const data3 = fs.readFileSync('./ref_map_long_strings.bin');
 
 const decoder = new Decoder();
-[data1, data2].map(encoded => {
+decoder.setDebugMode(true);
+[data1, data2, data3].map(encoded => {
   const outputData = decoder.decode(encoded);
   console.log('decoded:', JSON.stringify(outputData));
 });

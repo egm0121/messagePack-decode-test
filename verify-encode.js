@@ -30,6 +30,37 @@ const exampleData = [
   {
     fileName: 'ref_map_long_strings',
     data: { name: 'averyveryveryveryveryveryveryveryveryveryveryverylongname','bigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigbigkey':'value'}
+  },
+  {
+    fileName: 'manyprops_map',
+    data: {
+      name: 'giulio', 
+      surname: 'dellorbo',
+      a:'a',
+      b:'b',
+      c:'c',
+      d:'d',
+      e:'e',
+      f:'f',
+      g:'g',
+      h:'h',
+      i:'i',
+      l:'l',
+      m:'m',
+      n:'n',
+      o:'o',
+      p:'p',
+      q:'q',
+      r:'r',
+      s:'s',
+      t:'t',
+      u:'u',
+      v:'v',
+      w:'w',
+      z:'z',
+      x:'x',
+      y:'y'
+    }
   }
 ]
 exampleData.forEach((test) => {
