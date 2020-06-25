@@ -1,4 +1,5 @@
 const fs = require('fs');
+
 const data= {name:'test', myprop:'demo'};
 
 const encodeString = (str) => {

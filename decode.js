@@ -1,4 +1,5 @@
 const fs = require('fs');
+
 const DATATYPES = {
   NIL: 'NIL',
   BOOL: 'BOOL',
@@ -147,9 +148,10 @@ class Decoder {
     //set value for lastKey at parentObj
     parentObj[stack.lastKey] = valueString;
     stack.length--;
-    this.resetParentStacks();
-    if (stack.length) {
-      stack.nextKey = true;
+    stack.nextKey = true;
+    if (stack.length === 0) {
+      stack.nextKey = false;
+      this.resetParentStacks();
     }
   }
   readMultiByteUInt(bytesLength){
@@ -278,13 +280,5 @@ class Decoder {
     return this.output;
   }
 }
-const data1 = fs.readFileSync('./ref_deep_nest_single_el_.bin');
-const data2 = fs.readFileSync('./ref_deep_nested_empty.bin');
-const data3 = fs.readFileSync('./ref_map_long_strings.bin');
 
-const decoder = new Decoder();
-decoder.setDebugMode(true);
-[data1, data2, data3].map(encoded => {
-  const outputData = decoder.decode(encoded);
-  console.log('decoded:', JSON.stringify(outputData));
-});
+module.exports = Decoder;

@@ -2,13 +2,17 @@
   "name": "bson",
   "version": "1.0.0",
   "description": "",
-  "main": "decode.js",
+  "main": "main.js",
+  "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest .",
+    "decode": "node decode.js",
+    "encode": "node encode.js"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "jest": "^26.1.0",
     "what-the-pack": "^2.0.3"
   }
 }
