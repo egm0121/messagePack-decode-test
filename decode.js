@@ -151,7 +151,6 @@ class Decoder {
     stack.nextKey = true;
     if (stack.length === 0) {
       stack.nextKey = false;
-      this.decrementParentStack();
       this.resetCompletedStacks();
     }
   }
@@ -271,6 +270,7 @@ class Decoder {
     this.stack[parentDepth].length--;
   }
   resetCompletedStacks(){
+    this.decrementParentStack();
     this.debug('reset parent stacks');
     let depth = this.stack.length-1;
     while(this.stack[depth]) {
