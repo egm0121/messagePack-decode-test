@@ -151,7 +151,8 @@ class Decoder {
     stack.nextKey = true;
     if (stack.length === 0) {
       stack.nextKey = false;
-      this.resetParentStacks();
+      this.decrementParentStack();
+      this.resetCompletedStacks();
     }
   }
   readMultiByteUInt(bytesLength){
@@ -234,7 +235,7 @@ class Decoder {
       // all parents stack with one child element
       // can now be marked as completed since the
       // leaf is the empty map we just added on the stack 
-      this.resetParentStacks();
+      this.resetCompletedStacks();
     }
   }
   readStringDataType(firstByte){
@@ -263,13 +264,19 @@ class Decoder {
   isStackRoot(){
     return this.stack.length === 1;
   }
-  resetParentStacks(){
+  decrementParentStack() {
+    this.debug('decrement parent stack');
+    if(this.isStackRoot()) return false;
+    let parentDepth = this.stack.length - 2;
+    this.stack[parentDepth].length--;
+  }
+  resetCompletedStacks(){
     this.debug('reset parent stacks');
-    let depth = this.stack.length -1;
+    let depth = this.stack.length-1;
     while(this.stack[depth]) {
       const nStack = this.stack[depth];
       if(nStack.length <= 1 && !this.stack[depth].root){
-        this.debug('remove stack @ depth',depth)
+        this.debug('remove stack @ depth',depth,'path:',this.stack.path)
         this.stack.pop()
       }
       depth--;
