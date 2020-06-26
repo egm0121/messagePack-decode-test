@@ -7,7 +7,7 @@ describe('MessagePack Decoder - decode:',() => {
     decoder = new Decoder();
   });
   exampleData
-  // .filter(data => data.fileName === 'ref_deep_nest_single_el_')
+  // .filter(data => data.fileName === 'ref_simple_map_with_array')
   .map(testData => {
     it(testData.fileName, () => {
       const bufferData = fs.readFileSync(`${testData.fileName}.bin`);

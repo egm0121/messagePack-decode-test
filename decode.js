@@ -1,5 +1,4 @@
 const fs = require('fs');
-
 const DATATYPES = {
   NIL: 'NIL',
   BOOL: 'BOOL',
@@ -121,36 +120,50 @@ class Decoder {
     const currPath = this.getCurrStackPath();
     return this.getObjectAtPath(currPath);
   }
-  readStringAtOffset(len){
-    this.debug('readStringAtOffset',len);
+  readStringAtPosition(firstByte) {
+    this.debug('readStringAtPosition',firstByte);
+    let strLen = (firstByte & 0x1f);
+    const multiByteLength = DATATYPE_LENGTH.STR[firstByte];
+    if (multiByteLength) {
+      strLen = this.readMultiByteUInt(multiByteLength);
+    }
     let str = '';
-    for(let i=0; i < len; i++){
+    for(let i=0; i < strLen; i++){
       this.offset++;
       str +=  String.fromCharCode(this.buffer[this.offset]);
     }
     return str;
   }
-  readMapKeyAtOffset(len){
-    this.debug('readMapKeyAtOffset', len);
-    const string = this.readStringAtOffset(len);
+  addMapKey(keyStr) {
+    this.debug('addMapKey', keyStr);
     const stack = this.getCurrStack();
     const parentObj = this.getObjectAtCurrStackPath();
     //init a new key at parentObj to initial undefined value
-    parentObj[string] = undefined;
+    parentObj[keyStr] = undefined;
     stack.nextKey = false;
-    stack.lastKey = string;
+    stack.lastKey = keyStr;
   }
-  readMapValueAtOffset(len){
-    this.debug('readMapValueAtOffset', len);
-    const valueString = this.readStringAtOffset(len);
+  addMapValue(value) {
+    this.debug('addMapValue', value);
     const stack = this.getCurrStack();
     const parentObj = this.getObjectAtCurrStackPath();
     //set value for lastKey at parentObj
-    parentObj[stack.lastKey] = valueString;
+    parentObj[stack.lastKey] = value;
     stack.length--;
     stack.nextKey = true;
     if (stack.length === 0) {
       stack.nextKey = false;
+      this.resetCompletedStacks();
+    }
+  }
+  addArrayValue(value) {
+    this.debug('addArrayValue', value);
+    const stack = this.getCurrStack();
+    const parentObj = this.getObjectAtCurrStackPath();
+    //set value for lastKey at parentObj
+    parentObj.push(value);
+    stack.length--;
+    if (stack.length === 0) {
       this.resetCompletedStacks();
     }
   }
@@ -201,7 +214,12 @@ class Decoder {
     }
     //parse STR
     if( BYTE_TO_DATATYPE[currType] === DATATYPES.STR || (currType >>> 5) === 0x05) {
-     this.readStringDataType(currType);
+     // this.readStringDataType(currType);
+     this.addDataAtCurrentStack(DATATYPES.STR, currType);
+    }
+    //parse ARRAY
+    if( BYTE_TO_DATATYPE[currType] === DATATYPES.ARRAY || (currType >>> 4) === 0x09){
+      this.readArrayDataType(currType);
     }
     return this.readDataType();
   }
@@ -237,24 +255,52 @@ class Decoder {
       this.resetCompletedStacks();
     }
   }
-  readStringDataType(firstByte){
-    this.debug('readDataType - string detected');
-    let strLen = (firstByte & 0x1f);
-    const multiByteLength = DATATYPE_LENGTH.STR[firstByte];
+  readArrayDataType(firstByte){
+    this.debug('readArrayDataType');
+    const isRoot = this.stack.length === 0;
+    const arrPath = !isRoot && this.getCurrStack().lastKey;
+    let arrLength = (firstByte & 0x0f);
+    const multiByteLength = DATATYPE_LENGTH.ARRAY[firstByte];
     if (multiByteLength) {
-      strLen = this.readMultiByteUInt(multiByteLength);
+      arrLength = this.readMultiByteUInt(multiByteLength);
+    }
+    if (isRoot) {
+      this.output = [];
+    } else {
+      const parentNode = this.getObjectAtCurrStackPath();
+      parentNode[arrPath] = [];
+      if(this.getCurrStack().type == 'map'){
+        this.getCurrStack().nextKey = true;
+      }
+    }
+    this.stack.push({
+      root: isRoot,
+      path: arrPath,
+      type:'array',
+      length: arrLength,
+    });
+    //handle empty map case
+    if(arrLength === 0) {
+      this.resetCompletedStacks();
+    }
+  }
+  addDataAtCurrentStack(type, firstByte){
+    this.debug('addDataAtCurrentStack');
+    let data = null;
+    if (type === DATATYPES.STR) {
+      data = this.readStringAtPosition(firstByte);
     }
     const stack = this.getCurrStack();
-    if(!stack){
-      this.output = this.readStringAtOffset(strLen);
+    if (!stack) {
+      this.output = data;
     }
-    if(stack.type === 'map'){
-      if(stack.nextKey){
-        this.readMapKeyAtOffset(strLen);
-      }
-      else {
-        this.readMapValueAtOffset(strLen);
-      }
+    if (stack.type === 'map'){
+      stack.nextKey ?
+      this.addMapKey(data):
+      this.addMapValue(data);
+    }
+    if (stack.type === 'array') {
+      this.addArrayValue(data);
     }
   }
   getCurrStack(){

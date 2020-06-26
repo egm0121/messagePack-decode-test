@@ -58,6 +58,14 @@ const exampleData = [
       x:'x',
       y:'y'
     }
+  },
+  {
+    fileName: 'ref_simple_array',
+    data: ['one','two','three']
+  },
+  {
+    fileName: 'ref_simple_map_with_array',
+    data: { name: 'giulio', 'interests': ['code','serverless','rn']}
   }
 ]
 module.exports = exampleData;
